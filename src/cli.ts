@@ -1,3 +1,5 @@
+import { PngOptions } from 'sharp';
+
 import { Options, PlatformOptions } from '.';
 import { PLATFORMS, Platform, RunPlatformOptions, validatePlatforms } from './platform';
 import { DEFAULT_RESOURCES_DIRECTORY, RESOURCE_TYPES, ResourceType, validateResourceTypes } from './resources';
@@ -22,14 +24,18 @@ export function parseOptions(args: ReadonlyArray<string>): Options {
   };
 }
 
-export function generateRunOptions(platform: Platform, resourcesDirectory: string, args: ReadonlyArray<string>): RunPlatformOptions {
+export function generateRunOptions(platform: Platform, resourcesDirectory: string, args: ReadonlyArray<string>, pngOptions?: PngOptions): RunPlatformOptions {
   const typeOption = getOptionValue(args, '--type');
   const types = validateResourceTypes(typeOption ? [typeOption] : RESOURCE_TYPES);
 
-  return {
+  const runPlatformOptions: RunPlatformOptions = {
     [ResourceType.ICON]: types.includes(ResourceType.ICON) ? parseIconOptions(platform, resourcesDirectory, args) : undefined,
     [ResourceType.SPLASH]: types.includes(ResourceType.SPLASH) ? parseSplashOptions(platform, resourcesDirectory, args) : undefined,
   };
+  if (pngOptions) {
+    runPlatformOptions.pngOptions = pngOptions;
+  }
+  return runPlatformOptions;
 }
 
 export function parseIconOptions(platform: Platform, resourcesDirectory: string, args: ReadonlyArray<string>): RunPlatformOptions[ResourceType.ICON] {

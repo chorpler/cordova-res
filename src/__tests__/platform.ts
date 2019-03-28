@@ -30,11 +30,12 @@ describe('cordova-res', () => {
       });
 
       it('should run through android icons with successful result', async () => {
-        const pipeline: any = { clone: jest.fn(() => pipeline) }
+        const pipeline: any = { clone: jest.fn(() => pipeline) };
         imageMock.resolveSourceImage.mockImplementation(async () => ['test.png', pipeline]);
 
         const result = await platform.run(Platform.ANDROID, 'resources', {
           [ResourceType.ICON]: { sources: ['icon.png'] },
+          pngOptions: { quality: 80 },
         });
 
         const generatedImages = RESOURCES[Platform.ANDROID][ResourceType.ICON].images;
@@ -45,7 +46,7 @@ describe('cordova-res', () => {
         expect(imageMock.generateImage).toHaveBeenCalledTimes(generatedImages.length);
 
         for (const generatedImage of generatedImages) {
-          expect(imageMock.generateImage).toHaveBeenCalledWith(generatedImage, expect.anything(), expect.any(String));
+          expect(imageMock.generateImage).toHaveBeenCalledWith(generatedImage, expect.anything(), expect.any(String), expect.anything());
         }
 
         expect(result.length).toEqual(generatedImages.length);

@@ -1,6 +1,7 @@
 import { ensureDir } from '@ionic/utils-fs';
 import Debug from 'debug';
 import pathlib from 'path';
+import { PngOptions } from 'sharp';
 
 import { generateImage, resolveSourceImage } from './image';
 import { RESOURCES, RESOURCE_TYPES, ResourceKey, ResourceType, ResourcesImageConfig } from './resources';
@@ -16,11 +17,13 @@ export const PLATFORMS: ReadonlyArray<Platform> = [Platform.ANDROID, Platform.IO
 
 export interface RunPlatformResourceTypeOptions {
   sources: string[];
+  pngOptions?: PngOptions;
 }
 
 export interface RunPlatformOptions {
   [ResourceType.ICON]?: RunPlatformResourceTypeOptions;
   [ResourceType.SPLASH]?: RunPlatformResourceTypeOptions;
+  pngOptions?: PngOptions;
 }
 
 export interface GeneratedImage extends ResourcesImageConfig {
@@ -40,6 +43,10 @@ export async function run(platform: Platform, resourcesPath: string, options: Re
     const typeOptions = options[type];
 
     if (typeOptions) {
+      const pngOptions = options.pngOptions;
+      if (pngOptions) {
+        typeOptions.pngOptions = pngOptions;
+      }
       return runType(platform, type, resourcesPath, typeOptions, errstream);
     }
 
@@ -54,13 +61,14 @@ export async function runType(platform: Platform, type: ResourceType, resourcesP
 
   debug('Using %O for %s source image for %s', src, type, platform);
 
+  const pngOptions = options.pngOptions;
   const config = RESOURCES[platform][type];
   const dir = pathlib.resolve(resourcesPath, platform, type);
   await ensureDir(dir);
 
   const images = await Promise.all(config.images.map(async image => {
     const dest = pathlib.join(dir, image.name);
-    await generateImage(image, pipeline.clone(), dest);
+    await generateImage(image, pipeline.clone(), dest, pngOptions);
 
     return {
       src,

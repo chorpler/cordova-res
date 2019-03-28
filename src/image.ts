@@ -1,6 +1,6 @@
 import { readFile, writeFile } from '@ionic/utils-fs';
 import Debug from 'debug';
-import sharp, { Sharp } from 'sharp';
+import sharp, { PngOptions, Sharp } from 'sharp';
 import util from 'util';
 
 import { ResolveSourceImageError, ValidationError } from './error';
@@ -45,13 +45,24 @@ export interface ImageSchema {
   height: number;
 }
 
-export async function generateImage(image: ImageSchema, src: Sharp, dest: string): Promise<void> {
+export async function generateImage(image: ImageSchema, src: Sharp, dest: string, options?: PngOptions): Promise<void> {
   debug('Generating %o (%ox%o)', dest, image.width, image.height);
+  if (options) {
+    debug('Generating using options %o', options);
+  }
 
-  const pipeline = transformImage(image, src);
-  await writeFile(dest, await pipeline.toBuffer());
+  const pipeline = transformImage(image, src, options);
+  const pipelineBuffer = options ? await pipeline.png(options).toBuffer() : await pipeline.toBuffer();
+  // await writeFile(dest, await pipeline.toBuffer());
+  await writeFile(dest, pipelineBuffer);
 }
 
-export function transformImage(image: ImageSchema, src: Sharp): Sharp {
-  return src.resize(image.width, image.height);
+export function transformImage(image: ImageSchema, src: Sharp, options?: PngOptions): Sharp {
+  // if (options) {
+    // return src.resize(image.width, image.height).png(options);
+    // return src.resize(image.width, image.height);
+  // } else {
+    // return src.resize(image.width, image.height).flatten({background: 'white' });
+    return src.resize(image.width, image.height);
+  // }
 }

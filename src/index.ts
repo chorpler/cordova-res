@@ -1,5 +1,6 @@
 import Debug from 'debug';
 import path from 'path';
+import { PngOptions } from 'sharp';
 
 import { generateRunOptions, parseOptions } from './cli';
 import { read as readConfig, run as runConfig, write as writeConfig } from './config';
@@ -7,7 +8,7 @@ import { BaseError } from './error';
 import { GeneratedImage, PLATFORMS, Platform, RunPlatformOptions, run as runPlatform } from './platform';
 import { DEFAULT_RESOURCES_DIRECTORY, Density, Orientation } from './resources';
 
-const debug = Debug('cordova-res');
+const debug = Debug('cordova-res:index');
 
 interface ResultImage {
   src: string;
@@ -24,16 +25,24 @@ async function CordovaRes({
   resourcesDirectory = DEFAULT_RESOURCES_DIRECTORY,
   logstream = process.stdout,
   errstream = process.stderr,
+  pngOptions,
   platforms = {
-    [Platform.ANDROID]: generateRunOptions(Platform.ANDROID, resourcesDirectory, []),
-    [Platform.IOS]: generateRunOptions(Platform.IOS, resourcesDirectory, []),
+    [Platform.ANDROID]: generateRunOptions(Platform.ANDROID, resourcesDirectory, [], pngOptions),
+    [Platform.IOS]: generateRunOptions(Platform.IOS, resourcesDirectory, [], pngOptions),
   },
 }: CordovaRes.Options = {}): Promise<ResultImage[]> {
   const configPath = path.resolve(directory, 'config.xml');
   const resourcesPath = path.isAbsolute(resourcesDirectory) ? resourcesDirectory : path.resolve(directory, resourcesDirectory);
-
+  const defaultPlatformOptions: CordovaRes.PlatformOptions = {
+    [Platform.ANDROID]: generateRunOptions(Platform.ANDROID, resourcesDirectory, [], pngOptions),
+    [Platform.IOS]: generateRunOptions(Platform.IOS, resourcesDirectory, [], pngOptions),
+  };
+  if (!platforms) {
+    platforms = defaultPlatformOptions;
+  }
   debug('Paths: (config: %O) (resources: %O)', configPath, resourcesPath);
-
+  debug('PngOptions: ', pngOptions);
+  debug('Platforms: ', platforms);
   const config = await readConfig(configPath);
   const images: GeneratedImage[] = [];
 
@@ -41,6 +50,10 @@ async function CordovaRes({
     const platformOptions = platforms[platform];
 
     if (platformOptions) {
+      if (pngOptions) {
+        (platformOptions as any).pngOptions = pngOptions;
+      }
+      debug('Executing for platform %O with platformOptions %O', platform, platformOptions);
       const platformImages = await runPlatform(platform, resourcesPath, platformOptions, errstream);
       logstream.write(`Generated ${platformImages.length} images for ${platform}\n`);
       images.push(...platformImages);
@@ -115,6 +128,13 @@ namespace CordovaRes {
      * provided, resources are generated in an explicit, opt-in manner.
      */
     readonly platforms?: Readonly<PlatformOptions>;
+
+    /**
+     * Specify PNG output options
+     *
+     * @see {@link https://sharp.pixelplumbing.com/en/stable/api-output/#parameters_4|Sharp PNG Options} for further information
+     */
+    pngOptions?: PngOptions | undefined;
   }
 
   export async function runCommandLine(args: ReadonlyArray<string>): Promise<void> {
